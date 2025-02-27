@@ -1,0 +1,172 @@
+  
+    
+Sensor Data Dashboard
+    
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+.card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 15px;
+}
+.card-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+.alert {
+    background-color: #fff8f8;
+    border-left: 4px solid #ff4444;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+.alert-high {
+    border-left-color: #ff0000;
+    background-color: #ffeeee;
+}
+.alert-medium {
+    border-left-color: #ff8800;
+    background-color: #fff8ee;
+}
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.stat-item {
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 4px;
+}
+.stat-label {
+    font-size: 12px;
+    color: #666;
+}
+.stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+header {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+h1 {
+    color: #333;
+}
+.last-update {
+    color: #666;
+    font-size: 14px;
+}
+
+
+
+
+Sensor Data Dashboard
+Last update: Never
+
+
+
+
+    Recent Alerts
+    
+        No alerts yet
+    
+
+
+
+    
+    Loading sensor data...
+
+
+
+
+// Function to format date
+function formatDate(timestamp) {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString();
+}
+
+// Function to update the dashboard
+function updateDashboard() {
+    fetch('/api/sensor-data')
+        .then(response => response.json())
+        .then(data => {
+            // Update last update time
+            document.getElementById('last-update').textContent = 
+                `Last update: ${formatDate(data.last_update)}`;
+            
+            // Update alerts
+            const alertsContainer = document.getElementById('alerts-container');
+            if (data.alerts && data.alerts.length > 0) {
+                alertsContainer.innerHTML = '';
+                data.alerts.forEach(alert => {
+                    const alertEl = document.createElement('div');
+                    alertEl.className = `alert alert-${alert.severity.toLowerCase()}`;
+                    alertEl.innerHTML = `
+                        ${alert.timestamp}
+                        ${alert.message}
+                        Value: ${alert.value}
+                    `;
+                    alertsContainer.appendChild(alertEl);
+                });
+            } else {
+                alertsContainer.innerHTML = 'No alerts yet';
+            }
+            
+            // Update sensor data
+            const sensorsContainer = document.getElementById('sensors-container');
+            if (data.sensor_data && data.sensor_data.length > 0) {
+                sensorsContainer.innerHTML = '';
+                
+                data.sensor_data.forEach(sensor => {
+                    const sensorCard = document.createElement('div');
+                    sensorCard.className = 'card';
+                    sensorCard.innerHTML = `
+                        ${sensor.sensor_id} (${sensor.sensor_type})
+                        
+                            
+                                Average
+                                ${sensor.avg_value}
+                            
+                            
+                                Min/Max
+                                ${sensor.min_value} / ${sensor.max_value}
+                            
+                            
+                                Location
+                                ${sensor.location}
+                            
+                            
+                                Anomalies
+                                ${sensor.anomaly_count} / ${sensor.reading_count}
+                            
+                        
+                    `;
+                    sensorsContainer.appendChild(sensorCard);
+                });
+            } else {
+                sensorsContainer.innerHTML = 'No sensor data available';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+}
+
+// Update initially and then every 5 seconds
+updateDashboard();
+setInterval(updateDashboard, 5000);
