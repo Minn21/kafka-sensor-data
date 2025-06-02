@@ -1,8 +1,13 @@
-# docker-compose.yml
 version: '3'
+
+networks:
+  kafka-net:
+    driver: bridge
 
 services:
   zookeeper:
+    networks:
+      - kafka-net
     image: confluentinc/cp-zookeeper:7.3.0
     container_name: zookeeper
     environment:
@@ -12,6 +17,8 @@ services:
       - "2181:2181"
 
   kafka-1:
+    networks:
+      - kafka-net
     image: confluentinc/cp-kafka:7.3.0
     container_name: kafka-1
     depends_on:
@@ -21,14 +28,17 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_NUM_PARTITIONS: 3
-
+  
   kafka-2:
+    networks:
+      - kafka-net
     image: confluentinc/cp-kafka:7.3.0
     container_name: kafka-2
     depends_on:
@@ -38,14 +48,17 @@ services:
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:29093,PLAINTEXT_HOST://localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29093,EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:29093,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_NUM_PARTITIONS: 3
 
   kafka-3:
+    networks:
+      - kafka-net
     image: confluentinc/cp-kafka:7.3.0
     container_name: kafka-3
     depends_on:
@@ -55,16 +68,20 @@ services:
     environment:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:29094,PLAINTEXT_HOST://localhost:9094
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29094,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:29094,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_NUM_PARTITIONS: 3
 
   kafka-setup:
+    networks:
+      - kafka-net
     image: confluentinc/cp-kafka:7.3.0
     container_name: kafka-setup
+    user: root
     depends_on:
       - kafka-1
       - kafka-2
@@ -72,7 +89,7 @@ services:
     command: >
       bash -c "
         echo 'Waiting for Kafka to be ready...' &&
-        cub kafka-ready -b kafka-1:29092 1 30 &&
+        cub kafka-ready -b kafka-1:29092,kafka-2:29093,kafka-3:29094 1 30 &&
         kafka-topics --create --if-not-exists --bootstrap-server kafka-1:29092 --partitions 3 --replication-factor 3 --topic sensor_data &&
         kafka-topics --create --if-not-exists --bootstrap-server kafka-1:29092 --partitions 3 --replication-factor 3 --topic processed_data &&
         kafka-topics --create --if-not-exists --bootstrap-server kafka-1:29092 --partitions 3 --replication-factor 3 --topic alerts
@@ -82,6 +99,8 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 
   producer:
+    networks:
+      - kafka-net
     build:
       context: ./producers
     container_name: sensor-producer
@@ -93,6 +112,8 @@ services:
       SIMULATION_INTERVAL_MS: 500
 
   alert-consumer:
+    networks:
+      - kafka-net
     build:
       context: ./consumers
       dockerfile: Dockerfile.alert
@@ -104,6 +125,8 @@ services:
       CONSUMER_GROUP_ID: alert-group
 
   analytics-consumer:
+    networks:
+      - kafka-net
     build:
       context: ./consumers
       dockerfile: Dockerfile.analytics
@@ -115,6 +138,8 @@ services:
       CONSUMER_GROUP_ID: analytics-group
 
   storage-consumer:
+    networks:
+      - kafka-net
     build:
       context: ./consumers
       dockerfile: Dockerfile.storage
@@ -126,6 +151,8 @@ services:
       CONSUMER_GROUP_ID: storage-group
 
   dashboard:
+    networks:
+      - kafka-net
     build:
       context: ./dashboard
     container_name: dashboard
@@ -135,3 +162,16 @@ services:
       - analytics-consumer
     environment:
       FLASK_ENV: development
+
+  kafdrop:
+    networks:
+      - kafka-net
+    image: obsidiandynamics/kafdrop:latest
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKER_CONNECT: "kafka-1:29092,kafka-2:29093,kafka-3:29094"
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
