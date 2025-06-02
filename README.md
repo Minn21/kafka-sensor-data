@@ -1,8 +1,4 @@
-# Real-Time Sensor Data Processing with Kafka
-
 A demonstration project for processing simulated IoT sensor data through an Apache Kafka pipeline.
-
-![Project Architecture](https://via.placeholder.com/800x400?text=Kafka+Sensor+Project+Architecture)
 
 ## Overview
 
@@ -43,7 +39,7 @@ Data flows through the following pipeline:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/kafka-sensor-project.git
+git clone https://github.com/Minn21/kafka-sensor-project.git
 cd kafka-sensor-project
 ```
 
@@ -153,23 +149,3 @@ To clean up completely (including volumes):
 ```bash
 docker-compose down -v
 ```
-
-## Potential Enhancements
-
-This project could be extended with:
-
-1. Integration with a database for permanent storage
-2. Advanced stream processing using Kafka Streams
-3. Additional visualization types in the dashboard
-4. Schema enforcement using Kafka Schema Registry
-5. Deployment to a cloud environment like AWS MSK
-
-## Learning Resources
-
-- [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
-- [Confluent Kafka Tutorials](https://kafka-tutorials.confluent.io/)
-- [Kafka: The Definitive Guide](https://www.confluent.io/resources/kafka-the-definitive-guide/)
-
-## License
-
-MIT
